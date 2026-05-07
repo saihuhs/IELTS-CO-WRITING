@@ -18,8 +18,7 @@ export function WritingArea({ topic, essay, onEssayChange, onRequestScore, isSco
   const wordCount = essay.trim() ? essay.trim().split(/\s+/).length : 0
   
   const minWords = topic?.taskType === 'task1' ? 150 : 250
-  const isTask1 = topic?.taskType === 'task1'
-
+  
   const getWordCountColor = useCallback(() => {
     if (wordCount === 0) return 'text-muted-foreground'
     if (wordCount < minWords - 100) return 'text-destructive'

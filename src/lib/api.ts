@@ -145,7 +145,7 @@ export async function scoreEssay(
         if (result.status === 429) throw new Error('Rate limited. Please wait a moment and try again.')
         throw new Error(`API error (${result.status}): ${result.body.slice(0, 200)}`)
       }
-      const content: string = result.json?.choices?.[0]?.message?.content ?? ''
+      const content: string = (result.json as any)?.choices?.[0]?.message?.content ?? ''
       if (!content) throw new Error('Empty response from AI model.')
       return validateResult(JSON.parse(extractJSON(content)))
     }
@@ -160,7 +160,7 @@ export async function scoreEssay(
     const visionResult = await callApi(settings, visionMessages, controller.signal)
 
     if (visionResult.ok) {
-      const content: string = visionResult.json?.choices?.[0]?.message?.content ?? ''
+      const content: string = (visionResult.json as any)?.choices?.[0]?.message?.content ?? ''
       if (!content) throw new Error('Empty response from AI model.')
       return validateResult(JSON.parse(extractJSON(content)))
     }
@@ -177,7 +177,7 @@ export async function scoreEssay(
         if (fallbackResult.status === 429) throw new Error('Rate limited. Please wait a moment and try again.')
         throw new Error(`API error (${fallbackResult.status}): ${fallbackResult.body.slice(0, 200)}`)
       }
-      const content: string = fallbackResult.json?.choices?.[0]?.message?.content ?? ''
+      const content: string = (fallbackResult.json as any)?.choices?.[0]?.message?.content ?? ''
       if (!content) throw new Error('Empty response from AI model.')
       return validateResult(JSON.parse(extractJSON(content)))
     }

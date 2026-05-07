@@ -1,15 +1,14 @@
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useRef, useCallback } from 'react'
 import CodeMirror from '@uiw/react-codemirror'
 import { EditorView } from '@codemirror/view'
-import { EditorState } from '@codemirror/state'
 import { markdown } from '@codemirror/lang-markdown'
-import type { ApiSettings, Topic } from '@/types'
+import type { Topic } from '@/types'
 import { useApiSettings } from '@/contexts/ApiSettingsContext'
 import { streamAutocomplete, checkSentence } from '@/lib/editor-api'
 
 // Import custom extensions
 import { ghostTextField, ghostTextPlugin, acceptGhostTextKeymap, setGhostText } from './ghostText'
-import { correctionsField, addCorrection, removeCorrection, clearCorrections } from './corrections'
+import { correctionsField, addCorrection, removeCorrection } from './corrections'
 
 interface IeltsEditorProps {
   value: string

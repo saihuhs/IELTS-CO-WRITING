@@ -28,7 +28,7 @@ export const ghostTextField = StateField.define<string | null>({
     }),
 })
 
-function ghostTextDecorations(text: string): DecorationSet {
+function ghostTextDecorations(_text: string): DecorationSet {
   // We apply the decoration dynamically via a ViewPlugin, 
   // because we need the current cursor position from the view.
   return Decoration.none // This is handled in ghostTextPlugin

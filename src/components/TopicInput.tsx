@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from 'react'
-import { ImagePlus, Type, X, Upload, BookOpen } from 'lucide-react'
+import { ImagePlus, Type, X, Upload } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
