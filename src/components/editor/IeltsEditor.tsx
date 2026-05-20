@@ -45,6 +45,8 @@ export const IeltsEditor = forwardRef<IeltsEditorHandle, IeltsEditorProps>(funct
     from: number
     to: number
     text: string
+    contextBefore: string
+    contextAfter: string
   } | null>(null)
   
   const [polishState, setPolishState] = useState<{
@@ -56,6 +58,8 @@ export const IeltsEditor = forwardRef<IeltsEditorHandle, IeltsEditorProps>(funct
     from: number
     to: number
     text: string
+    contextBefore: string
+    contextAfter: string
   } | null>(null)
   const [polishLoading, setPolishLoading] = useState(false)
   
@@ -451,6 +455,9 @@ export const IeltsEditor = forwardRef<IeltsEditorHandle, IeltsEditorProps>(funct
       } else if (!mainSelection.empty && mainSelection.to - mainSelection.from > 1) {
         const text = state.sliceDoc(mainSelection.from, mainSelection.to).trim()
         if (text) {
+          const contextBefore = state.sliceDoc(Math.max(0, mainSelection.from - 200), mainSelection.from)
+          const contextAfter = state.sliceDoc(mainSelection.to, Math.min(state.doc.length, mainSelection.to + 200))
+          
           const wordCount = text.split(/\s+/).filter(Boolean).length
           if (wordCount <= 3) {
             const view = viewRef.current
@@ -468,7 +475,9 @@ export const IeltsEditor = forwardRef<IeltsEditorHandle, IeltsEditorProps>(funct
                 left: Math.min(endCoords.left - editorRect.left, editorRect.width - 250),
                 from: mainSelection.from,
                 to: mainSelection.to,
-                text
+                text,
+                contextBefore,
+                contextAfter
               })
               setPolishState({ loading: false, suggestions: [] })
               setPolishTarget(null)
@@ -479,7 +488,7 @@ export const IeltsEditor = forwardRef<IeltsEditorHandle, IeltsEditorProps>(funct
           } else {
             setSelectionTooltip(null)
             setPolishState({ loading: false, suggestions: [] })
-            setPolishTarget({ from: mainSelection.from, to: mainSelection.to, text })
+            setPolishTarget({ from: mainSelection.from, to: mainSelection.to, text, contextBefore, contextAfter })
             setPolishLoading(false)
             if (polishAbort.current) polishAbort.current.abort()
             viewRef.current.dispatch({ effects: setInlinePolish.of(null) })
@@ -585,7 +594,7 @@ export const IeltsEditor = forwardRef<IeltsEditorHandle, IeltsEditorProps>(funct
       setPolishState({ loading: true, suggestions: [] })
       
       try {
-        const result = await polishSelection(settings, selectionTooltip.text, polishAbort.current.signal, 'tooltip')
+        const result = await polishSelection(settings, selectionTooltip.text, selectionTooltip.contextBefore, selectionTooltip.contextAfter, polishAbort.current.signal, 'tooltip')
         const suggestions = (result?.suggestions ?? []).map(s => s.trim()).filter(Boolean).slice(0, 3)
         if (suggestions.length > 0) {
           setPolishState({ loading: false, suggestions })
@@ -616,7 +625,7 @@ export const IeltsEditor = forwardRef<IeltsEditorHandle, IeltsEditorProps>(funct
       setPolishLoading(true)
       
       try {
-        const result = await polishSelection(settings, polishTarget.text, polishAbort.current.signal, 'inline')
+        const result = await polishSelection(settings, polishTarget.text, polishTarget.contextBefore, polishTarget.contextAfter, polishAbort.current.signal, 'inline')
         const suggestion = result?.suggestions?.[0]?.trim()
         if (!suggestion) {
           setPolishLoading(false)

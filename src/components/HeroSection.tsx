@@ -1,7 +1,11 @@
-import { ArrowDown } from 'lucide-react'
+import { useState } from 'react'
+import { ArrowDown, BookOpen } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { TutorialModal } from '@/components/TutorialModal'
 
 export function HeroSection() {
+  const [tutorialOpen, setTutorialOpen] = useState(false)
+
   const scrollToPractice = () => {
     document.getElementById('practice')?.scrollIntoView({ behavior: 'smooth' })
   }
@@ -23,15 +27,26 @@ export function HeroSection() {
             <p className="max-w-md text-base leading-relaxed text-primary-foreground/75">
               Upload essay topics as images or type them in directly. Practice writing under exam conditions and sharpen your skills for Band 7+.
             </p>
-            <Button
-              variant="secondary"
-              size="lg"
-              className="w-fit gap-2"
-              onClick={scrollToPractice}
-            >
-              Start Practicing
-              <ArrowDown className="h-4 w-4" />
-            </Button>
+            <div className="flex flex-wrap items-center gap-3">
+              <Button
+                variant="secondary"
+                size="lg"
+                className="gap-2"
+                onClick={scrollToPractice}
+              >
+                Start Practicing
+                <ArrowDown className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="lg"
+                className="gap-2 bg-primary-foreground/10 border-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/20 hover:text-primary-foreground"
+                onClick={() => setTutorialOpen(true)}
+              >
+                <BookOpen className="h-4 w-4" />
+                How it Works
+              </Button>
+            </div>
           </div>
           <div className="hidden lg:flex items-center justify-center animate-slide-up">
             <img
@@ -43,6 +58,11 @@ export function HeroSection() {
           </div>
         </div>
       </div>
+
+      <TutorialModal 
+        isOpen={tutorialOpen} 
+        onClose={() => setTutorialOpen(false)} 
+      />
     </section>
   )
 }

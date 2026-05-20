@@ -202,11 +202,13 @@ Respond ONLY in valid JSON format (do not provide explanations):
 }`
 
 const POLISH_TOOLTIP_SYSTEM_PROMPT = `You are an advanced IELTS Band 9 polishing engine.
-Analyze the user's selected text and provide improvements.
-1. If it's a SINGLE WORD: provide EXACTLY 3 advanced replacement words (Band 7+).
-2. If it's a SHORT PHRASE (2-4 words): provide EXACTLY 3 improved alternatives that keep the meaning.
-3. If it's a SINGLE SENTENCE: rewrite it using advanced structures while keeping the original meaning intact. Provide 1-2 options.
-4. If it's MULTIPLE SENTENCES: merge them into a single, highly condensed and complex sentence using appropriate logical connectors. Provide 1 option.
+Analyze the user's selected text and provide improvements based on the surrounding context.
+1. IF THE SELECTED TEXT IS CHINESE: Translate it into highly natural, academic English that fits perfectly into the surrounding context. Provide EXACTLY 3 English translation options.
+2. IF THE SELECTED TEXT IS ENGLISH:
+   - If it's a SINGLE WORD: provide EXACTLY 3 advanced replacement words (Band 7+) that fit the context.
+   - If it's a SHORT PHRASE (2-4 words): provide EXACTLY 3 improved alternatives that keep the meaning and fit the context.
+   - If it's a SINGLE SENTENCE: rewrite it using advanced structures while keeping the original meaning intact. Provide 1-2 options.
+   - If it's MULTIPLE SENTENCES: merge them into a single, highly condensed and complex sentence using appropriate logical connectors. Provide 1 option.
 
 Respond ONLY in valid JSON format:
 {
@@ -214,7 +216,10 @@ Respond ONLY in valid JSON format:
 }`
 
 const POLISH_INLINE_SYSTEM_PROMPT = `You are an advanced IELTS Band 9 polishing engine.
-Rewrite the user's selected sentence into a more advanced and natural version while keeping the original meaning intact.
+Analyze the user's selected text and provide an improvement based on the surrounding context.
+1. IF THE SELECTED TEXT IS CHINESE: Translate it into highly natural, academic English that fits perfectly into the surrounding context.
+2. IF THE SELECTED TEXT IS ENGLISH: Rewrite the user's selected sentence into a more advanced and natural version while keeping the original meaning intact.
+
 Return EXACTLY ONE suggestion string.
 
 Respond ONLY in valid JSON format:
@@ -511,6 +516,8 @@ export async function checkSentence(
 export async function polishSelection(
   settings: ApiSettings,
   selectedText: string,
+  contextBefore: string,
+  contextAfter: string,
   signal: AbortSignal,
   mode: 'tooltip' | 'inline' = 'tooltip'
 ): Promise<PolishResult | null> {
@@ -523,7 +530,7 @@ export async function polishSelection(
     model: settings.model,
     messages: [
       { role: 'system', content: systemPrompt },
-      { role: 'user', content: `Please polish the following selection:\n"${selectedText}"` }
+      { role: 'user', content: `Text BEFORE selection: "${contextBefore}"\n\nSelected text to polish/translate: "${selectedText}"\n\nText AFTER selection: "${contextAfter}"` }
     ],
     temperature: mode === 'inline' ? 0.2 : 0.3,
     max_tokens: 1024,
