@@ -23,6 +23,7 @@ export function TopicInput({ onTopicSet, selectedTaskType, onTaskTypeChange }: T
       const result = e.target?.result as string
       setImagePreview(result)
       onTopicSet({ type: 'image', content: result, taskType: selectedTaskType })
+      setMode('image')
     }
     reader.readAsDataURL(file)
   }, [onTopicSet, selectedTaskType])

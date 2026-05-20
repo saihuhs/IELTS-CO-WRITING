@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Library, Trash2, ChevronDown } from 'lucide-react'
 import type { SavedSession } from '@/types'
-import { loadCollections, removeCollection } from '@/lib/storage'
+import { loadCollections, removeCollection, updateCollectionMeta } from '@/lib/storage'
 import { Button } from '@/components/ui/button'
 import { ScoreBadge } from '@/components/ScoreBadge'
 import { CollectionDetail } from '@/components/CollectionDetail'
@@ -10,11 +10,22 @@ import { cn } from '@/lib/utils'
 export function CollectionsPage() {
   const [sessions, setSessions] = useState<SavedSession[]>(loadCollections)
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [titleDraft, setTitleDraft] = useState('')
 
   const handleDelete = (id: string) => {
     removeCollection(id)
     setSessions((prev) => prev.filter((s) => s.id !== id))
     if (expandedId === id) setExpandedId(null)
+  }
+
+  const handleUpdateSession = (
+    id: string,
+    meta: { title?: string },
+  ) => {
+    const updated = updateCollectionMeta(id, meta)
+    if (!updated) return
+    setSessions((prev) => prev.map((s) => (s.id === id ? updated : s)))
   }
 
   const toggleExpand = (id: string) => {
@@ -25,6 +36,14 @@ export function CollectionsPage() {
     return new Date(iso).toLocaleDateString('en-US', {
       year: 'numeric', month: 'long', day: 'numeric',
     })
+  }
+
+  const getDefaultTitle = (s: SavedSession) => {
+    if (s.topic.type === 'text') {
+      const t = s.topic.content.trim()
+      return t.slice(0, 100) + (t.length > 100 ? '...' : '')
+    }
+    return 'Image Topic'
   }
 
   return (
@@ -55,11 +74,42 @@ export function CollectionsPage() {
               <div className="flex items-center gap-4 px-5 py-4">
                 <ScoreBadge score={s.scoringResult.overallBand} />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-foreground truncate">
-                    {s.topic.type === 'text'
-                      ? s.topic.content.slice(0, 100) + (s.topic.content.length > 100 ? '...' : '')
-                      : 'Image Topic'}
-                  </p>
+                  {editingId === s.id ? (
+                    <input
+                      value={titleDraft}
+                      onChange={(e) => setTitleDraft(e.target.value)}
+                      onBlur={() => {
+                        const nextTitle = titleDraft.trim()
+                        handleUpdateSession(s.id, { title: nextTitle.length ? nextTitle : undefined })
+                        setEditingId(null)
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          const nextTitle = titleDraft.trim()
+                          handleUpdateSession(s.id, { title: nextTitle.length ? nextTitle : undefined })
+                          setEditingId(null)
+                        }
+                        if (e.key === 'Escape') {
+                          setEditingId(null)
+                        }
+                      }}
+                      autoFocus
+                      className="w-full bg-transparent text-sm font-medium text-foreground outline-none border-b border-border/60 focus:border-primary/50"
+                    />
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingId(s.id)
+                        setTitleDraft(s.title ?? getDefaultTitle(s))
+                      }}
+                      className="group w-full text-left"
+                    >
+                      <p className="text-sm font-medium text-foreground truncate group-hover:underline underline-offset-2">
+                        {s.title ?? getDefaultTitle(s)}
+                      </p>
+                    </button>
+                  )}
                   <div className="flex items-center gap-3 mt-1">
                     <span className="text-xs text-muted-foreground">{formatDate(s.savedAt)}</span>
                     <span className="text-xs text-muted-foreground">{s.wordCount} words</span>

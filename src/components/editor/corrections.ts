@@ -1,5 +1,5 @@
 import { StateField, StateEffect } from '@codemirror/state'
-import { Decoration, DecorationSet, EditorView, WidgetType } from '@codemirror/view'
+import { Decoration, DecorationSet, EditorView, WidgetType, keymap } from '@codemirror/view'
 
 export interface CorrectionEntry {
   id: string
@@ -7,7 +7,6 @@ export interface CorrectionEntry {
   to: number
   original: string
   improved: string
-  explanation?: string
 }
 
 // Effect to add a new correction
@@ -31,10 +30,10 @@ export const correctionsField = StateField.define<DecorationSet>({
     for (const e of tr.effects) {
       if (e.is(addCorrection)) {
         const { from, to, improved } = e.value
-        // Create strikethrough mark
+        // Create squiggly underline mark
         const strikeMark = Decoration.mark({
           class: 'cm-correction-strikethrough',
-          attributes: { style: 'text-decoration: line-through; color: #ef4444; opacity: 0.7;' },
+          attributes: { style: 'text-decoration: underline wavy red; text-underline-offset: 3px;' },
           id: e.value.id
         })
         // Create inline widget for improved text
@@ -62,7 +61,54 @@ export const correctionsField = StateField.define<DecorationSet>({
   provide: (f) => EditorView.decorations.from(f),
 })
 
-// Widget to show the suggested replacement text (green, clickable)
+// Keymap extension to accept the correction when pressing Tab
+import { Prec } from '@codemirror/state'
+
+export const acceptCorrectionKeymap = Prec.high(keymap.of([
+  {
+    key: 'Tab',
+    run: (view: EditorView) => {
+      const state = view.state
+      const pos = state.selection.main.head
+      const corrections = state.field(correctionsField, false)
+      
+      if (!corrections) return false
+
+      // Look for a correction near the cursor (e.g., cursor is at the end of the sentence)
+      let foundFrom = -1
+      let foundTo = -1
+      let foundId = ''
+      let foundReplacement = ''
+
+      corrections.between(Math.max(0, pos - 10), Math.min(state.doc.length, pos + 10), (from, to, value) => {
+        if (value.spec.class === 'cm-correction-strikethrough') {
+          foundFrom = from
+          foundTo = to
+          foundId = value.spec.id
+        }
+      })
+
+      if (foundId && foundFrom !== -1 && foundTo !== -1) {
+        // Find the corresponding replacement text
+        corrections.between(foundTo, foundTo + 1, (_from, _to, value) => {
+          if (value.spec.widget instanceof ReplacementWidget && value.spec.id === foundId) {
+            foundReplacement = value.spec.widget.text
+          }
+        })
+
+        if (foundReplacement) {
+          view.dispatch({
+            changes: { from: foundFrom, to: foundTo, insert: foundReplacement },
+            effects: removeCorrection.of(foundId)
+          })
+          return true // Prevent default Tab behavior
+        }
+      }
+      
+      return false
+    },
+  },
+]))
 class ReplacementWidget extends WidgetType {
   constructor(readonly text: string, readonly id: string) {
     super()
@@ -84,7 +130,7 @@ class ReplacementWidget extends WidgetType {
     span.style.padding = '0 4px'
     span.style.marginLeft = '4px'
     span.style.marginRight = '4px'
-    span.title = 'Click to accept correction'
+    span.title = 'Click or press Tab when cursor is near to accept correction'
 
     // Click handler to accept the correction
     span.onclick = (e) => {

@@ -78,6 +78,7 @@ export function PracticePage() {
             <CardContent>
               <WritingArea
                 topic={topic}
+                selectedTaskType={selectedTaskType}
                 essay={essay}
                 onEssayChange={setEssay}
                 onRequestScore={handleScore}

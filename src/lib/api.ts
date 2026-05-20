@@ -40,6 +40,8 @@ function compressImage(dataUrl: string, maxDim = 1200, quality = 0.8): Promise<s
   })
 }
 
+
+
 function buildVisionContent(imageDataUrl: string, essayText: string): MessageContent {
   return [
     {
@@ -48,15 +50,20 @@ function buildVisionContent(imageDataUrl: string, essayText: string): MessageCon
     },
     {
       type: 'text' as const,
-      text: `The image above shows the IELTS Writing Task topic (which may contain charts, graphs, diagrams, or text prompts).\n\n${essayText}`,
+      text: SCORING_SYSTEM_PROMPT + '\n\n' + `The image above shows the IELTS Writing Task topic (which may contain charts, graphs, diagrams, or text prompts).\n\n${essayText}`,
     },
   ]
 }
-
-function buildTextOnlyContent(essay: string, wordCount: number, topicText?: string): string {
+function buildTextOnlyContent(
+  essay: string,
+  wordCount: number,
+  topicText?: string,
+  taskType?: Topic['taskType'],
+): string {
+  const taskLabel = taskType === 'task1' ? 'Task 1' : 'Task 2'
   const essayBlock = `Here is the student's essay (${wordCount} words):\n\n${essay}`
   if (topicText) {
-    return `IELTS Writing Task Topic:\n${topicText}\n\n${essayBlock}`
+    return `IELTS Writing ${taskLabel} Topic:\n${topicText}\n\n${essayBlock}`
   }
   // Fallback for image topics when vision is not supported
   return `The topic was provided as an image that this model cannot read. Please evaluate the essay based on its internal coherence, argument quality, language use, and structure. Assume the essay is relevant to its intended topic.\n\n${essayBlock}`
@@ -74,7 +81,16 @@ function validateResult(data: unknown): ScoringResult {
   const obj = data as Record<string, unknown>
   if (typeof obj.overallBand !== 'number') throw new Error('Missing overallBand')
   if (!Array.isArray(obj.criteria) || obj.criteria.length !== 4) throw new Error('Expected 4 criteria')
-  if (typeof obj.generalFeedback !== 'string') throw new Error('Missing generalFeedback')
+  const teacherFeedback = obj.teacherFeedback as any
+  const hasTeacherFeedback =
+    teacherFeedback &&
+    typeof teacherFeedback === 'object' &&
+    typeof teacherFeedback.kelly === 'string' &&
+    typeof teacherFeedback.jieming === 'string'
+  const hasGeneralFeedback = typeof obj.generalFeedback === 'string'
+  if (!hasTeacherFeedback && !hasGeneralFeedback) {
+    throw new Error('Missing teacherFeedback/generalFeedback')
+  }
   if (!Array.isArray(obj.vocabularyAlternatives)) throw new Error('Missing vocabularyAlternatives')
   if (typeof obj.rewrittenEssay !== 'string') throw new Error('Missing rewrittenEssay')
   return obj as unknown as ScoringResult
@@ -96,19 +112,23 @@ async function callApi(
   signal: AbortSignal,
 ): Promise<{ ok: boolean; status: number; body: string; json?: Record<string, unknown> }> {
   const url = `${settings.baseUrl.replace(/\/+$/, '')}/chat/completions`
+  
+  const payload: Record<string, any> = {
+    model: settings.model,
+    messages,
+    temperature: 0.3,
+  }
+
+  // GLM-4.6V-Flash supports max_tokens, but let's make it very large
+  payload.max_tokens = 8192
+
   const res = await fetch(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${settings.apiKey}`,
     },
-    body: JSON.stringify({
-      model: settings.model,
-      messages,
-      response_format: { type: 'json_object' },
-      temperature: 0.3,
-      max_tokens: 4096,
-    }),
+    body: JSON.stringify(payload),
     signal,
   })
 
@@ -137,7 +157,7 @@ export async function scoreEssay(
     if (topic.type === 'text') {
       const messages: ChatMessage[] = [
         { role: 'system', content: SCORING_SYSTEM_PROMPT },
-        { role: 'user', content: buildTextOnlyContent(essay, wordCount, topic.content) },
+        { role: 'user', content: buildTextOnlyContent(essay, wordCount, topic.content, topic.taskType) },
       ]
       const result = await callApi(settings, messages, controller.signal)
       if (!result.ok) {
@@ -151,9 +171,8 @@ export async function scoreEssay(
     }
 
     // For image topics: try vision first, fallback to text-only
-    const compressed = await compressImage(topic.content)
+    const compressed = await compressImage(topic.content).catch(() => topic.content)
     const visionMessages: ChatMessage[] = [
-      { role: 'system', content: SCORING_SYSTEM_PROMPT },
       { role: 'user', content: buildVisionContent(compressed, essayText) },
     ]
 
@@ -169,7 +188,7 @@ export async function scoreEssay(
     if (isVisionUnsupportedError(visionResult.status, visionResult.body)) {
       const fallbackMessages: ChatMessage[] = [
         { role: 'system', content: SCORING_SYSTEM_PROMPT },
-        { role: 'user', content: buildTextOnlyContent(essay, wordCount) },
+        { role: 'user', content: buildTextOnlyContent(essay, wordCount, undefined, topic.taskType) },
       ]
       const fallbackResult = await callApi(settings, fallbackMessages, controller.signal)
       if (!fallbackResult.ok) {

@@ -1,12 +1,21 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import { Navbar } from '@/components/Navbar'
 import { SettingsDialog } from '@/components/SettingsDialog'
 import { PracticePage } from '@/pages/PracticePage'
 import { CollectionsPage } from '@/components/CollectionsPage'
+import { useApiSettings } from '@/contexts/ApiSettingsContext'
 
 function App() {
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const { isConfigured } = useApiSettings()
+
+  // Auto-open settings for first-time users who haven't configured their API key
+  useEffect(() => {
+    if (!isConfigured) {
+      setSettingsOpen(true)
+    }
+  }, [isConfigured])
 
   return (
     <div className="min-h-screen bg-background">

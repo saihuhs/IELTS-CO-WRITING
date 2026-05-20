@@ -1,10 +1,11 @@
 import { useState } from 'react'
-import { Bookmark, BookmarkCheck, ArrowRight } from 'lucide-react'
+import { Bookmark, BookmarkCheck, ArrowRight, Languages } from 'lucide-react'
 import type { ScoringResult } from '@/types'
 import { Button } from '@/components/ui/button'
 import { ScoreBadge } from '@/components/ScoreBadge'
 import { ScoreCriterion } from '@/components/ScoreCriterion'
 import { RewrittenEssay } from '@/components/RewrittenEssay'
+import { TeacherFeedback } from '@/components/TeacherFeedback'
 
 interface ScoreDisplayProps {
   result: ScoringResult
@@ -14,10 +15,15 @@ interface ScoreDisplayProps {
 
 export function ScoreDisplay({ result, onSave, readOnly = false }: ScoreDisplayProps) {
   const [saved, setSaved] = useState(false)
+  const [language, setLanguage] = useState<'en' | 'zh'>('en')
 
   const handleSave = () => {
     onSave?.()
     setSaved(true)
+  }
+
+  const toggleLanguage = () => {
+    setLanguage((prev) => (prev === 'en' ? 'zh' : 'en'))
   }
 
   return (
@@ -33,31 +39,50 @@ export function ScoreDisplay({ result, onSave, readOnly = false }: ScoreDisplayP
               <ScoreBadge score={result.overallBand} size="lg" />
             </div>
           </div>
-          {!readOnly && onSave && (
+          <div className="flex items-center gap-2">
             <Button
-              variant={saved ? 'secondary' : 'outline'}
+              variant="outline"
               size="sm"
-              onClick={handleSave}
-              disabled={saved}
+              onClick={toggleLanguage}
               className="gap-1.5"
             >
-              {saved ? (
-                <><BookmarkCheck className="h-4 w-4" /> Saved</>
-              ) : (
-                <><Bookmark className="h-4 w-4" /> Save to Collection</>
-              )}
+              <Languages className="h-4 w-4" />
+              {language === 'en' ? 'Translate to Chinese' : 'Show Original English'}
             </Button>
-          )}
+            {!readOnly && onSave && (
+              <Button
+                variant={saved ? 'secondary' : 'outline'}
+                size="sm"
+                onClick={handleSave}
+                disabled={saved}
+                className="gap-1.5"
+              >
+                {saved ? (
+                  <><BookmarkCheck className="h-4 w-4" /> Saved</>
+                ) : (
+                  <><Bookmark className="h-4 w-4" /> Save to Collection</>
+                )}
+              </Button>
+            )}
+          </div>
         </div>
-        <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
-          {result.generalFeedback}
-        </p>
+        {result.teacherFeedback ? (
+          <div className="mt-4">
+            <TeacherFeedback feedback={result.teacherFeedback} language={language} />
+          </div>
+        ) : (
+          result.generalFeedback && (
+            <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
+              {result.generalFeedback}
+            </p>
+          )
+        )}
       </div>
 
       {/* 4 criteria grid */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         {result.criteria.map((c) => (
-          <ScoreCriterion key={c.criterion} data={c} />
+          <ScoreCriterion key={c.criterion} data={c} language={language} />
         ))}
       </div>
 
@@ -76,7 +101,9 @@ export function ScoreDisplay({ result, onSave, readOnly = false }: ScoreDisplayP
                 <ArrowRight className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
                 <div>
                   <p className="text-sm font-medium text-primary">{v.improved}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">{v.explanation}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {language === 'zh' && v.explanation_zh ? v.explanation_zh : v.explanation}
+                  </p>
                 </div>
               </div>
             ))}

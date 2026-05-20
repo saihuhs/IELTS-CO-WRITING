@@ -48,3 +48,18 @@ export function removeCollection(id: string): void {
   const filtered = existing.filter((s) => s.id !== id)
   localStorage.setItem(COLLECTIONS_KEY, JSON.stringify(filtered))
 }
+
+export function updateCollectionMeta(
+  id: string,
+  meta: { title?: string },
+): SavedSession | null {
+  const existing = loadCollections()
+  let updated: SavedSession | null = null
+  const next = existing.map((s) => {
+    if (s.id !== id) return s
+    updated = { ...s, ...meta }
+    return updated
+  })
+  localStorage.setItem(COLLECTIONS_KEY, JSON.stringify(next))
+  return updated
+}

@@ -15,19 +15,30 @@ export interface CriterionScore {
   label: string
   score: number
   feedback: string
+  feedback_zh?: string
   suggestions: string[]
+  suggestions_zh?: string[]
 }
 
 export interface VocabularyAlternative {
   original: string
   improved: string
   explanation: string
+  explanation_zh?: string
+}
+
+export interface TeacherFeedback {
+  kelly: string
+  kelly_zh?: string
+  jieming: string
+  jieming_zh?: string
 }
 
 export interface ScoringResult {
   overallBand: number
   criteria: CriterionScore[]
-  generalFeedback: string
+  generalFeedback?: string
+  teacherFeedback?: TeacherFeedback
   vocabularyAlternatives: VocabularyAlternative[]
   rewrittenEssay: string
 }
@@ -36,6 +47,7 @@ export interface SavedSession {
   id: string
   savedAt: string
   topic: Topic
+  title?: string
   essay: string
   wordCount: number
   scoringResult: ScoringResult

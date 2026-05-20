@@ -4,10 +4,13 @@ import { Lightbulb } from 'lucide-react'
 
 interface ScoreCriterionProps {
   data: CriterionScore
+  language?: 'en' | 'zh'
 }
 
-export function ScoreCriterion({ data }: ScoreCriterionProps) {
+export function ScoreCriterion({ data, language = 'en' }: ScoreCriterionProps) {
   const pct = (data.score / 9) * 100
+  const feedbackText = language === 'zh' && data.feedback_zh ? data.feedback_zh : data.feedback
+  const suggestionsList = language === 'zh' && data.suggestions_zh ? data.suggestions_zh : data.suggestions
 
   return (
     <div className="rounded-lg border bg-card p-5 space-y-3">
@@ -29,16 +32,16 @@ export function ScoreCriterion({ data }: ScoreCriterionProps) {
         />
       </div>
 
-      <p className="text-sm leading-relaxed text-muted-foreground">{data.feedback}</p>
+      <p className="text-sm leading-relaxed text-muted-foreground">{feedbackText}</p>
 
-      {data.suggestions.length > 0 && (
+      {suggestionsList.length > 0 && (
         <div className="space-y-1.5 rounded-md bg-secondary/50 p-3">
           <div className="flex items-center gap-1.5">
             <Lightbulb className="h-3.5 w-3.5 text-accent" />
             <span className="text-xs font-semibold text-foreground">Suggestions</span>
           </div>
           <ul className="space-y-1">
-            {data.suggestions.map((s, i) => (
+            {suggestionsList.map((s, i) => (
               <li key={i} className="text-xs leading-relaxed text-muted-foreground pl-5 relative before:content-['•'] before:absolute before:left-1.5 before:text-accent">
                 {s}
               </li>
